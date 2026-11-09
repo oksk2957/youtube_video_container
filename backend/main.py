@@ -89,7 +89,8 @@ def validate_video_signature(head: bytes, ext: str):
 
 @app.get("/api/health")
 def health():
-    return {"ok": True, "ffmpeg": shutil.which("ffmpeg") is not None,
+    return {"app": "one-shot-local", "storage": "temporary-local", "ok": True,
+            "ffmpeg": shutil.which("ffmpeg") is not None,
             "ffprobe": shutil.which("ffprobe") is not None}
 
 

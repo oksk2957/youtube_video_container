@@ -37,6 +37,13 @@ class ApiTests(unittest.TestCase):
     def tearDown(self):
         self.client_context.__exit__(None, None, None)
 
+    def test_health_identifies_one_shot_backend(self):
+        response = self.client.get("/api/health")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["app"], "one-shot-local")
+        self.assertEqual(response.json()["storage"], "temporary-local")
+        self.assertNotIn("s3", response.text.lower())
+
     def upload(self):
         return self.client.post("/api/sessions", headers=ORIGIN,
             files={"file": ("video.mp4", io.BytesIO(self.video.read_bytes()), "video/mp4")})
