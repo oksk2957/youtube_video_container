@@ -145,6 +145,9 @@ async def upload_video(request: Request, file: UploadFile = File(...)):
         shutil.rmtree(folder, ignore_errors=True)
         LOG.warning("Upload or media probing rejected: %s", type(exc).__name__)
         raise HTTPException(status_code=422, detail="영상 파일을 읽지 못했습니다. 인코딩과 파일 상태를 확인하세요.") from exc
+    except BaseException:
+        shutil.rmtree(folder, ignore_errors=True)
+        raise
     finally:
         await file.close()
 

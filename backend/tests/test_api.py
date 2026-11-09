@@ -65,6 +65,31 @@ class ApiTests(unittest.TestCase):
     def test_unknown_session_not_accessible(self):
         self.assertEqual(self.client.get("/api/sessions/not-a-real-session/status").status_code, 404)
 
+    def test_cancel_running_job(self):
+        up = self.upload()
+        self.assertEqual(up.status_code, 201)
+        sid = up.json()["session_id"]
+        def wait_until_cancelled(session, settings):
+            for _ in range(500):
+                session.check()
+                time.sleep(0.005)
+        with patch("main.process_session", wait_until_cancelled):
+            response = self.client.post("/api/sessions/" + sid + "/start", headers=ORIGIN, json={
+                "base_url": "https://api.example.com/v1", "chat_model": "test-model",
+                "asr_model": "local:tiny", "api_key": "dummy",
+                "format": "shorts", "style": "calm", "target_seconds": 30,
+            })
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(self.client.post("/api/sessions/" + sid + "/cancel",
+                                              headers=ORIGIN).status_code, 200)
+            for _ in range(100):
+                state = self.client.get("/api/sessions/" + sid + "/status").json()
+                if state["status"] == "CANCELLED":
+                    break
+                time.sleep(0.02)
+            self.assertEqual(state["status"], "CANCELLED")
+            self.assertEqual(self.client.delete("/api/sessions/" + sid, headers=ORIGIN).status_code, 200)
+
     def test_mock_auto_edit_completion(self):
         up = self.upload()
         self.assertEqual(up.status_code, 201)

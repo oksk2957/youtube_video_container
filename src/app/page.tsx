@@ -163,6 +163,7 @@ export default function Home() {
   }
 
   async function reset() {
+    setError("");
     if (uploading) xhrRef.current?.abort();
     if (session) {
       try { await request("/api/sessions/" + session.session_id, "DELETE"); }
@@ -202,7 +203,7 @@ export default function Home() {
             <div className="section-head"><span className="step-index">01</span><h2>영상 업로드</h2></div>
             {!session ? (
               <div className="drop-area" onDragOver={e => e.preventDefault()}
-                onDrop={e => { e.preventDefault(); if (!uploading && e.dataTransfer.files[0]) showFile(e.dataTransfer.files[0]); }}>
+                onDrop={e => { e.preventDefault(); if (!session && !uploading && e.dataTransfer.files[0]) showFile(e.dataTransfer.files[0]); }}>
                 <div className="drop-symbol">↥</div>
                 <strong>{file ? file.name : "MP4 파일을 여기로 끌어오세요"}</strong>
                 <p>MP4 · MOV · WebM / 최대 1GiB · 로컬 임시 저장</p>

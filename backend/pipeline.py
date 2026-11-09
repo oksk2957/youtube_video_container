@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+import shutil
 import tempfile
 import uuid
 from pathlib import Path
@@ -29,7 +30,7 @@ def process_session(session: Session, settings):
                 transcript = provider.transcribe(audio, check=session.check)
             session.check()
             if transcript:
-                session.analysis_mode = "음성 분석" + (" + OCR" if os.getenv("USE_OCR", "1") == "1" else "")
+                session.analysis_mode = "음성 분석" + (" + OCR" if os.getenv("USE_OCR", "1") == "1" and shutil.which("tesseract") else "")
                 session.update("ANALYZING", 42, "음성과 화면을 함께 분석합니다.")
                 planner_segments = (
                     add_screen_text(session.source, transcript, session)

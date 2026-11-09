@@ -81,7 +81,9 @@ class AIProvider:
                         "end": round(segment.end, 3),
                         "text": segment.text.strip()[:700],
                     })
-            return output[:450]
+            if len(output) > 450:
+                raise ValueError("음성 인식 구간이 450개를 넘는 영상은 현재 지원하지 않습니다.")
+            return output
         with audio.open("rb") as handle:
             response = self.http.post(
                 self.base_url + "/audio/transcriptions",
@@ -109,7 +111,9 @@ class AIProvider:
                 raise ValueError("음성 인식 시간 정보가 영상 범위를 벗어났습니다.")
             if text:
                 output.append({"start": round(start, 3), "end": round(end, 3), "text": text[:700]})
-        return output[:450]
+        if len(output) > 450:
+            raise ValueError("음성 인식 구간이 450개를 넘는 영상은 현재 지원하지 않습니다.")
+        return output
 
     def chat_json(self, system: str, user: str) -> dict:
         response = self.http.post(
