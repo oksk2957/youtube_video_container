@@ -8,25 +8,36 @@ on:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: npm
-          cache-dependency-path: package.json
-      - name: Install packages
+      - name: Install JavaScript packages
         run: npm install --no-audit --no-fund
+      - name: Validate Prisma schema
+        run: npx prisma validate
+        env:
+          DATABASE_URL: postgresql://video:video@localhost:5432/video_studio?schema=public
       - name: Generate Prisma client
         run: npm run db:generate
-      - name: Unit tests
+      - name: Timeline unit tests
         run: npm test
       - name: ESLint
         run: npm run lint
-      - name: Production build
+      - name: Build
         run: npm run build
         env:
           DATABASE_URL: postgresql://video:video@localhost:5432/video_studio?schema=public
       - name: Typecheck
         run: npx tsc --noEmit
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Python worker dependencies
+        run: python -m pip install -r worker/requirements.txt
+      - name: Compile Python worker
+        run: python -m compileall -q worker/
+      - name: Python worker unit tests
+        run: python -m unittest discover -s worker/tests -v
