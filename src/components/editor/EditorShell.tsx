@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import UploadDropzone from "@/components/upload/UploadDropzone";
 import Timeline, { formatTime } from "@/components/editor/Timeline";
+import AutoEditPanel from "@/components/editor/AutoEditPanel";
 import {
   appendClip, clipAt, durationMs, moveClip, removeClip, splitClip, trimClip,
 } from "@/features/editor/timeline.mjs";
@@ -315,6 +316,7 @@ export default function EditorShell({
                 setSelectedId(null);
               }}>클립 삭제</button>
           </div>
+          <AutoEditPanel projectId={projectId} assets={assets}/>
         </section>
         <aside className="space-y-3 rounded-xl border border-zinc-800 p-4">
           <h2 className="font-bold">클립 속성</h2>
@@ -331,8 +333,7 @@ export default function EditorShell({
             </>
           ) : <p className="text-sm text-zinc-500">타임라인에서 클립을 선택하세요.</p>}
           <p className="border-t border-zinc-800 pt-3 text-xs text-amber-300">
-            이번 PR은 컷 편집과 타임라인 저장까지 지원합니다.
-            MP4 내보내기는 후속 PR에서 별도 렌더링 Worker로 구현합니다.
+            일반 컷 편집은 JSON으로 저장됩니다. AI 자동 편집의 MP4 출력은 별도 Python Worker가 담당합니다.
           </p>
         </aside>
       </div>
