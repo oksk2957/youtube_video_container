@@ -110,7 +110,7 @@ export default function AutoEditPanel({ projectId, assets }: { projectId: string
           </label>
         </div>
         <p className="mt-3 text-xs text-amber-300">
-          서버 AI_ALLOWED_HOSTS에 API 도메인을 허용해야 합니다. /chat/completions와
+          서버 AI_ALLOWED_HOSTS에 API 도메인을 허용해야 합니다. 음성 인식 모델에 local:small을 입력하면 로컬 Whisper를 사용합니다. /chat/completions와
           /audio/transcriptions (verbose_json 타임스탬프) 호환 서버가 필요합니다.
         </p>
         <button type="button" disabled={busy} onClick={() => void saveProvider()}

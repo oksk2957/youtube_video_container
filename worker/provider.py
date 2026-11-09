@@ -42,6 +42,29 @@ class AIProvider:
         self.http = httpx.Client(timeout=httpx.Timeout(300, connect=20), follow_redirects=False)
 
     def transcribe(self, audio_file: Path) -> list[dict]:
+        if self.transcription_model.startswith("local:"):
+            name = self.transcription_model.partition(":")[2]
+            if name not in {"tiny", "base", "small"}:
+                raise ValueError("Use local:tiny, local:base, or local:small")
+            try:
+                from faster_whisper import WhisperModel
+            except ImportError as exc:
+                raise ValueError("Local ASR requires faster-whisper to be installed") from exc
+            model = WhisperModel(name, device="cpu", compute_type="int8")
+            local_segments, _ = model.transcribe(str(audio_file), vad_filter=True)
+            output = []
+            for segment in local_segments:
+                if not 0 <= segment.start < segment.end:
+                    continue
+                text = segment.text.strip()
+                if text:
+                    output.append({"start": round(segment.start, 3),
+                                   "end": round(segment.end, 3), "text": text[:1000]})
+            if not output:
+                raise ValueError("Local ASR did not detect meaningful speech")
+            if len(output) > 1800:
+                raise ValueError("Too many ASR segments")
+            return output
         with audio_file.open("rb") as handle:
             response = self.http.post(
                 self.base_url + "/audio/transcriptions",
