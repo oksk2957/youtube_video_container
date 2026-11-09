@@ -42,6 +42,38 @@ async function request<T>(path: string, method = "GET", body?: unknown): Promise
   return data as T;
 }
 
+
+type BackendHealth = {
+  app?: string;
+  storage?: string;
+  ffmpeg?: boolean;
+  ffprobe?: boolean;
+};
+
+async function verifyLocalEditor(): Promise<void> {
+  let response: Response;
+  try {
+    response = await fetch(API + "/api/health", { credentials: "include", cache: "no-store" });
+  } catch {
+    throw new Error("Python 편집 서버에 연결할 수 없습니다. run.bat으로 로컬 서버를 실행하세요.");
+  }
+  if (!response.ok) {
+    throw new Error("Python 서버가 올바르게 응답하지 않습니다. 기존 서버를 종료하고 run.bat을 재실행하세요.");
+  }
+  let health: BackendHealth;
+  try {
+    health = await response.json();
+  } catch {
+    throw new Error("Python 서버가 예상과 다른 응답을 반환했습니다.");
+  }
+  if (health.app !== "one-shot-local" || health.storage !== "temporary-local") {
+    throw new Error("예전 S3/MinIO 서버 등 다른 백엔드가 실행 중입니다. 기존 서버를 모두 종료한 뒤 run.bat을 재실행하세요.");
+  }
+  if (!health.ffmpeg || !health.ffprobe) {
+    throw new Error("FFmpeg 또는 FFprobe가 인식되지 않습니다. 설치 및 PATH를 확인하세요.");
+  }
+}
+
 export default function Home() {
   const inputRef = useRef<HTMLInputElement>(null);
   const xhrRef = useRef<XMLHttpRequest | null>(null);
@@ -54,6 +86,8 @@ export default function Home() {
   const [uploadPct, setUploadPct] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [backendReady, setBackendReady] = useState(false);
+  const [backendStatus, setBackendStatus] = useState("Python 서버 연결을 확인 중입니다.");
   const [baseUrl, setBaseUrl] = useState("https://api.openai.com/v1");
   const [chatModel, setChatModel] = useState("gpt-4o-mini");
   const [asrModel, setAsrModel] = useState("local:small");
@@ -62,6 +96,22 @@ export default function Home() {
   const [style, setStyle] = useState<"auto" | "news" | "dynamic" | "calm">("auto");
   const [duration, setDuration] = useState(45);
   const [enhance, setEnhance] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+    void verifyLocalEditor().then(() => {
+      if (mounted) {
+        setBackendReady(true);
+        setBackendStatus("로컬 편집 엔진 연결됨 · S3/MinIO 사용 안 함");
+      }
+    }).catch((error) => {
+      if (mounted) {
+        setBackendReady(false);
+        setBackendStatus(error instanceof Error ? error.message : "서버 연결 오류");
+      }
+    });
+    return () => { mounted = false; };
+  }, []);
 
   useEffect(() => {
     if (!session || !job || !["ANALYZING", "PLANNING", "RENDERING", "CANCELLING"].includes(job.status)) return;
@@ -99,6 +149,9 @@ export default function Home() {
     setUploadPct(0);
     setUploading(true);
     try {
+      await verifyLocalEditor();
+      setBackendReady(true);
+      setBackendStatus("로컬 편집 엔진 연결됨 · S3/MinIO 사용 안 함");
       const info = await new Promise<SessionInfo>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         xhrRef.current = xhr;
@@ -121,7 +174,12 @@ export default function Home() {
       });
       setSession(info);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "업로드 실패");
+      const message = cause instanceof Error ? cause.message : "업로드 실패";
+      setError(message);
+      if (message.includes("서버") || message.includes("FFmpeg")) {
+        setBackendReady(false);
+        setBackendStatus(message);
+      }
     } finally {
       xhrRef.current = null;
       setUploading(false);
@@ -196,6 +254,9 @@ export default function Home() {
         </div>
         <span className="local-chip">● 로컬 PC 전용</span>
       </header>
+      <p className={backendReady ? "connection-ok" : "connection-warning"} role="status">
+        {backendReady ? "✓ " : "⚠ "}{backendStatus}
+      </p>
 
       <div className="workspace">
         <div className="left-column">

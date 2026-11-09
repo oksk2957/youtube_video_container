@@ -65,3 +65,6 @@ button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible { 
 footer { margin:30px 0 8px;text-align:center;color:#6f819e;font-size:11px; }
 @media(max-width:930px) { .workspace {grid-template-columns:1fr;} .app-shell{padding:20px 13px;} .masthead h1{font-size:21px;} .local-chip{font-size:10px;} .video-stage{min-height:300px;} }
 @media(max-width:480px) { .field-grid{grid-template-columns:1fr;} .field.full{grid-column:span 1;} .panel{padding:16px;} .masthead{align-items:start;} }
+
+.connection-ok { color:#8fe0ab; font-size:12px; margin:-9px 0 20px; }
+.connection-warning { color:#f6ba80; font-size:12px; margin:-9px 0 20px; }
