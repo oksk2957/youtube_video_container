@@ -32,6 +32,8 @@ jobs:
           node-version: "22"
       - name: Install JavaScript packages
         run: npm install --no-audit --no-fund
+      - name: Validate Docker Compose services
+        run: docker compose --profile ai config --quiet
       - name: Validate Prisma schema
         run: npx prisma validate
         env:
@@ -59,3 +61,5 @@ jobs:
         run: python -m compileall -q worker/
       - name: Python worker unit tests and synthetic FFmpeg render
         run: python -m unittest discover -s worker/tests -v
+      - name: Build Python FFmpeg Docker worker image
+        run: docker build -t video-studio-ai-worker:ci ./worker
