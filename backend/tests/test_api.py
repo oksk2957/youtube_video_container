@@ -12,7 +12,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from fastapi.testclient import TestClient
 from main import app, manager
 
-ORIGIN = {"Origin": "http://127.0.0.1:3000"}
+ORIGIN = {"Origin": "http://127.0.0.1:3100"}
 
 
 class ApiTests(unittest.TestCase):

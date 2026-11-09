@@ -25,7 +25,7 @@ from session_manager import BASE_DIR, COOKIE_NAME, EditCancelled, Session, manag
 LOG = logging.getLogger("one-shot-backend")
 MAX_UPLOAD = int(os.getenv("MAX_UPLOAD_BYTES", str(1024 * 1024 * 1024)))
 ALLOWED_SUFFIXES = {".mp4", ".mov", ".webm"}
-FRONTEND_ORIGIN = "http://127.0.0.1:3000"
+FRONTEND_ORIGIN = "http://127.0.0.1:3100"
 
 
 @asynccontextmanager

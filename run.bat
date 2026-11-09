@@ -11,10 +11,10 @@ where npm >nul 2>&1 || (echo [ERROR] npm is required. & exit /b 1)
 where python >nul 2>&1 || (echo [ERROR] Python 3.11+ is required. & exit /b 1)
 where ffmpeg >nul 2>&1 || (echo [ERROR] FFmpeg must be in PATH. & exit /b 1)
 where ffprobe >nul 2>&1 || (echo [ERROR] FFprobe must be in PATH. & exit /b 1)
-echo [CHECK] Verifying that older editors have stopped...
+echo [CHECK] Checking dedicated one-shot ports (3100 web / 8100 Python)...
 python scripts\check_local_ports.py
 if errorlevel 1 (
-    echo [STOP] An old server may still be running. Close its terminal and retry run.bat.
+    echo [STOP] One-shot ports 3100/8100 are busy. Close the conflicting app and retry.
     exit /b 1
 )
 if not exist ".venv\Scripts\python.exe" (
@@ -34,7 +34,7 @@ echo [START] Launching local Python and Next.js servers...
 start "OneShot-Backend" "%ComSpec%" /k "call scripts\start-backend.bat"
 start "OneShot-Frontend" "%ComSpec%" /k "call scripts\start-frontend.bat"
 timeout /t 6 /nobreak >nul
-start "" "http://127.0.0.1:3000"
+start "" "http://127.0.0.1:3100"
 echo.
 echo When finished, run stop.bat to close and erase temporary work files.
 echo.
