@@ -33,7 +33,11 @@ if not exist "node_modules" (
 echo [START] Launching local Python and Next.js servers...
 start "OneShot-Backend" "%ComSpec%" /k "call scripts\start-backend.bat"
 start "OneShot-Frontend" "%ComSpec%" /k "call scripts\start-frontend.bat"
-timeout /t 6 /nobreak >nul
+python scripts\verify_running_editor.py
+if errorlevel 1 (
+    echo [ERROR] The local editor is not healthy. Inspect the two server windows.
+    exit /b 1
+)
 start "" "http://127.0.0.1:3100"
 echo.
 echo When finished, run stop.bat to close and erase temporary work files.
