@@ -78,7 +78,7 @@ export default function EditorShell({
           return [asset.id, url] as const;
         } catch { return null; }
       }));
-      if (alive) setUrls((previous) => ({
+      if (alive && results.some((result) => result !== null)) setUrls((previous) => ({
         ...previous,
         ...Object.fromEntries(results.filter((result) => result !== null)),
       }));
@@ -87,6 +87,8 @@ export default function EditorShell({
     return () => { alive = false; };
   }, [assets, urls]);
 
+  // React Compiler cannot preserve the recursive retry callback memoization.
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization
   const save = useCallback(async () => {
     if (saving.current || saveBlocked.current || currentDraft.current === persistedDraft.current) return;
     saving.current = true;

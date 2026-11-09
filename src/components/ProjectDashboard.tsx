@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 type Project = { id: string; name: string; revision: number; updatedAt: string };
@@ -12,6 +13,7 @@ export default function ProjectDashboard({
   login: string | null;
   projects: Project[];
 }) {
+  const router = useRouter();
   const [name, setName] = useState("새 영상 프로젝트");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -28,7 +30,7 @@ export default function ProjectDashboard({
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "프로젝트 생성 실패");
-      window.location.href = "/projects/" + data.project.id + "/edit";
+      router.push("/projects/" + data.project.id + "/edit");
     } catch (e) {
       setError(e instanceof Error ? e.message : "오류가 발생했습니다.");
     } finally {
