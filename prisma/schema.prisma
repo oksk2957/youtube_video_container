@@ -1,0 +1,78 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String    @id @default(cuid())
+  githubId  String    @unique
+  login     String
+  avatarUrl String?
+  createdAt DateTime  @default(now())
+  sessions  Session[]
+  projects  Project[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model Project {
+  id        String       @id @default(cuid())
+  ownerId   String
+  name      String
+  timeline  Json
+  revision  Int          @default(0)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  owner     User         @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  assets    MediaAsset[]
+
+  @@index([ownerId, updatedAt])
+}
+
+model MediaAsset {
+  id              String        @id @default(cuid())
+  projectId       String
+  objectKey       String        @unique
+  fileName        String
+  contentType     String
+  bytes           BigInt
+  status          AssetStatus   @default(UPLOADING)
+  durationMs      Int?
+  width           Int?
+  height          Int?
+  createdAt       DateTime      @default(now())
+  project         Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  uploadSession   UploadSession?
+
+  @@index([projectId, createdAt])
+}
+
+enum AssetStatus {
+  UPLOADING
+  READY
+  FAILED
+}
+
+model UploadSession {
+  id          String    @id @default(cuid())
+  assetId     String    @unique
+  uploadId    String
+  partSize    Int
+  status      String    @default("UPLOADING")
+  createdAt   DateTime  @default(now())
+  asset       MediaAsset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+}
