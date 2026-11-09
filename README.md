@@ -1,5 +1,44 @@
 # One-Shot AI Video Editor
 
+## 오류 해결: Unable to start object storage upload
+
+이 영문 오류는 **옛 S3/MinIO 방식(PR #1)** 의 `src/app/api/uploads/init/route.ts` 에서 발생하며,
+이 일회성 브랜치에는 그 업로드 API가 존재하지 않습니다. 동영상을 잘못 올린 것이 아니라
+**오래된 브랜치를 실행 중이거나 3000 포트를 기존 Next.js가 차지한 상황**인지 확인하세요.
+
+1. 실행 중인 기존 Next.js 또는 Python 개발 서버의 터미널을 Ctrl+C로 종료합니다.
+2. 이미 클론한 Git 폴더라면 미커밋 변경 사항을 안전하게 별도 저장한 후:
+
+```powershell
+git fetch origin
+git switch -c feat/one-shot-local-ai-video-editor --track origin/feat/one-shot-local-ai-video-editor
+```
+
+이미 위 이름의 로컬 브랜치가 존재하면 `git switch feat/one-shot-local-ai-video-editor`와
+`git pull --ff-only`를 대신 실행합니다. 새 폴더에서 시작하고 싶다면:
+
+```powershell
+git clone -b feat/one-shot-local-ai-video-editor https://github.com/oksk2957/youtube_video_container.git
+cd youtube_video_container
+.\run.bat
+```
+
+3. `run.bat` 실행 전에 3000(Next.js)과 8000(FastAPI) 포트가 비어 있어야 합니다.
+   이번 수정으로 구버전이 점유한 포트가 있다면 `run.bat`이 **시작하지 않고 오류를 보여줍니다**.
+   사용 중인 프로그램을 찾으려면 PowerShell에서:
+
+```powershell
+Get-NetTCPConnection -State Listen -LocalPort 3000,8000 | Select-Object LocalPort,OwningProcess
+```
+
+4. 브라우저에서 **http://127.0.0.1:3000**으로 접속해 Ctrl+F5 새로고침하세요.
+   현재 화면에 **ONE-SHOT STUDIO**, **AI 연결**, **로컬 편집 엔진 연결됨 · S3/MinIO 사용 안 함**이 보여야 합니다.
+   이전 화면의 `영상 업로드 · MP4 · MOV · WebM / 최대 1GiB`만 보인다면 아직 **구버전**입니다.
+
+현재 소스는 별도의 객체 스토리지나 DB 없이 FastAPI의 `/api/sessions`로 파일을 올립니다.
+Python 서버를 켜지 않은 경우에는 새 화면에서 오류 원인과 실행 방법을 구체적으로 알려줍니다.
+
+
 로그인·프로젝트 생성·DB·S3·MinIO·Docker 없이 내 PC에서 사용하는 일회성 AI 자동 영상 편집기입니다.
 
 **사용 흐름:** 영상 업로드 → AI Base URL / 모델 / 키 설정 → 영상 분석 및 자동 편집 → 미리보기 → MP4 다운로드 → 작업 종료 / 임시 파일 삭제.
