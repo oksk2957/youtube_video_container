@@ -1,43 +1,61 @@
 # One-Shot AI Video Editor
 
-## 오류 해결: Unable to start object storage upload
+## 중요: 같은 S3 업로드 오류가 반복되는 이유
 
-이 영문 오류는 **옛 S3/MinIO 방식(PR #1)** 의 `src/app/api/uploads/init/route.ts` 에서 발생하며,
-이 일회성 브랜치에는 그 업로드 API가 존재하지 않습니다. 동영상을 잘못 올린 것이 아니라
-**오래된 브랜치를 실행 중이거나 3000 포트를 기존 Next.js가 차지한 상황**인지 확인하세요.
+`Unable to start object storage upload`는 **구버전 PR #1**의
+`src/app/api/uploads/init/route.ts`에서만 발생합니다. 사용자 제공 요청 기록은 실제로
+`http://localhost:3000/projects/.../edit` 및 `POST /api/uploads/init`로 접속 중임을 보여줍니다.
 
-1. 실행 중인 기존 Next.js 또는 Python 개발 서버의 터미널을 Ctrl+C로 종료합니다.
-2. 이미 클론한 Git 폴더라면 미커밋 변경 사항을 안전하게 별도 저장한 후:
+이번 수정부터 새 일회성 버전은 기존 서버와 포트까지 완전히 분리했습니다.
+
+| 구분 | 구버전(S3 사용) | 새 일회성 버전(S3 없음) |
+|---|---|---|
+| 웹 페이지 | http://localhost:3000 | **http://127.0.0.1:3100** |
+| Python API | 없음 또는 별도 | **http://127.0.0.1:8100** |
+| 업로드 API | /api/uploads/init | **/api/sessions** |
+| 프로젝트·로그인 | 있음 | 없음 |
+
+기존 3000번 서버를 꼭 종료할 필요는 없습니다. 다만 3000번 페이지를 계속 사용하면 예전 오류가 그대로 발생합니다. **반드시 3100번 주소를 열어야 합니다.**
+
+### 깨끗한 새 폴더에 설치 (추천)
+
+PowerShell에서 다음 명령을 사용합니다.
 
 ```powershell
-git fetch origin
-git switch -c feat/one-shot-local-ai-video-editor --track origin/feat/one-shot-local-ai-video-editor
-```
-
-이미 위 이름의 로컬 브랜치가 존재하면 `git switch feat/one-shot-local-ai-video-editor`와
-`git pull --ff-only`를 대신 실행합니다. 새 폴더에서 시작하고 싶다면:
-
-```powershell
-git clone -b feat/one-shot-local-ai-video-editor https://github.com/oksk2957/youtube_video_container.git
-cd youtube_video_container
+git clone -b feat/one-shot-local-ai-video-editor https://github.com/oksk2957/youtube_video_container.git youtube-video-one-shot-fixed
+cd youtube-video-one-shot-fixed
 .\run.bat
 ```
 
-3. `run.bat` 실행 전에 3000(Next.js)과 8000(FastAPI) 포트가 비어 있어야 합니다.
-   이번 수정으로 구버전이 점유한 포트가 있다면 `run.bat`이 **시작하지 않고 오류를 보여줍니다**.
-   사용 중인 프로그램을 찾으려면 PowerShell에서:
+처음 실행 시 Node.js 22+, Python 3.11+, FFmpeg/FFprobe가 PATH에 있어야 하고
+Python과 Node 패키지가 설치됩니다. `run.bat`이 새로운 포트 3100·8100에 다른 프로그램이 없는지 확인합니다.
+그 다음 **실제 실행 중인 FastAPI 서버가 로컬 편집기인지, Next.js 화면이 새 편집기인지**를 검증하고 브라우저를 엽니다.
+
+### 이미 받은 Git 저장소를 업데이트하는 경우
+
+미커밋 변경사항이 있다면 별도로 안전하게 백업한 후:
 
 ```powershell
-Get-NetTCPConnection -State Listen -LocalPort 3000,8000 | Select-Object LocalPort,OwningProcess
+git fetch origin
+git switch feat/one-shot-local-ai-video-editor
+git pull --ff-only
+.\run.bat
 ```
 
-4. 브라우저에서 **http://127.0.0.1:3000**으로 접속해 Ctrl+F5 새로고침하세요.
-   현재 화면에 **ONE-SHOT STUDIO**, **AI 연결**, **로컬 편집 엔진 연결됨 · S3/MinIO 사용 안 함**이 보여야 합니다.
-   이전 화면의 `영상 업로드 · MP4 · MOV · WebM / 최대 1GiB`만 보인다면 아직 **구버전**입니다.
+로컬 브랜치가 아직 없다면 `git switch -c feat/one-shot-local-ai-video-editor --track origin/feat/one-shot-local-ai-video-editor`을 사용하세요.
 
-현재 소스는 별도의 객체 스토리지나 DB 없이 FastAPI의 `/api/sessions`로 파일을 올립니다.
-Python 서버를 켜지 않은 경우에는 새 화면에서 오류 원인과 실행 방법을 구체적으로 알려줍니다.
+브라우저 주소는 `http://127.0.0.1:3100`입니다. Ctrl+F5로 새로고침하면
+`ONE-SHOT STUDIO` 및 **로컬 편집 엔진 연결됨 · S3/MinIO 사용 안 함** 표시를 확인할 수 있습니다.
 
+편집 프로그램이 실행 중인 포트를 확인하려면:
+
+```powershell
+Get-NetTCPConnection -State Listen -LocalPort 3000,3100,8000,8100 |
+  Select-Object LocalPort,OwningProcess
+```
+
+**첨부한 네트워크 기록에 세션 쿠키가 포함된 경우:** 기존 편집기에서 로그아웃해
+그 세션을 종료하고, 진단 로그를 공유할 때는 Cookie/Authorization 헤더를 가려 주세요.
 
 로그인·프로젝트 생성·DB·S3·MinIO·Docker 없이 내 PC에서 사용하는 일회성 AI 자동 영상 편집기입니다.
 
@@ -47,7 +65,7 @@ Python 서버를 켜지 않은 경우에는 새 화면에서 오류 원인과 �
 
 1. Node.js 22 이상, Python 3.11 이상, FFmpeg/FFprobe를 설치하고 PATH에 등록합니다.
 2. 프로젝트 루트에서 **run.bat**을 실행합니다. 처음 실행할 때 Python 가상환경·패키지와 Next.js 의존성을 설치합니다. Docker는 필요하지 않습니다.
-3. 브라우저에서 **http://127.0.0.1:3000** 주소를 사용하세요. 보안 쿠키는 같은 로컬 호스트를 사용하므로 localhost 대신 127.0.0.1로 접속합니다.
+3. 브라우저에서 **http://127.0.0.1:3100** 주소를 사용하세요. 보안 쿠키는 같은 로컬 호스트를 사용하므로 localhost 대신 127.0.0.1로 접속합니다.
 4. MP4, MOV 또는 WebM 파일을 선택해 업로드합니다. 실제 FFprobe 파일 검사 통과 후 임시 작업이 생성됩니다.
 5. 호환 AI 서비스의 HTTPS **Base URL**(예: https://api.openai.com/v1), Chat 모델, API 키를 입력합니다. 음성 인식은 **local:small**(로컬 CPU Whisper) 또는 해당 제공업체가 지원하는 전사 모델(예: whisper-1)을 선택합니다.
 6. 쇼츠 9:16 / 가로 16:9, 30·45·60·120초, AI 스타일을 설정하고 **AI 자동 편집 시작**을 누릅니다.
@@ -97,7 +115,7 @@ GitHub Actions에서 Next.js 빌드, Python API, 모의 AI, 화면/음성/무음
 
 ## 세션 및 개인 정보 보호
 
-- 모든 편집 요청은 **127.0.0.1**에서만 수신하고, 브라우저의 POST/DELETE Origin을 검사합니다. 웹 UI는 **127.0.0.1:3000**, API는 **127.0.0.1:8000**으로 고정됩니다.
+- 모든 편집 요청은 **127.0.0.1**에서만 수신하고, 브라우저의 POST/DELETE Origin을 검사합니다. 웹 UI는 **127.0.0.1:3100**, API는 **127.0.0.1:8000**으로 고정됩니다.
 - 로그인 계정은 만들지 않지만, 임시 HTTPOnly 세션 쿠키로 각 작업의 출력에 대한 접근을 제한합니다. 쿠키는 브라우저 세션 관리를 위한 것이지 영구 프로젝트가 아닙니다.
 - API 키는 서버의 실행 중 스레드 메모리에서만 사용하며 DB, 파일, 브라우저 localStorage에 저장하지 않습니다. 사용자가 브라우저에 입력한 키도 '작업 종료' 시 화면 상태에서 지웁니다.
 - 외부 AI는 공개 HTTPS 주소만 허용합니다. 로컬 AI 서비스가 필요하면 **ALLOW_LOCAL_AI_HTTP=1**로 명시적으로 허용한 뒤 `http://127.0.0.1:PORT/v1` 주소를 지정합니다.
