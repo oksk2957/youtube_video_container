@@ -11,6 +11,12 @@ where npm >nul 2>&1 || (echo [ERROR] npm is required. & exit /b 1)
 where python >nul 2>&1 || (echo [ERROR] Python 3.11+ is required. & exit /b 1)
 where ffmpeg >nul 2>&1 || (echo [ERROR] FFmpeg must be in PATH. & exit /b 1)
 where ffprobe >nul 2>&1 || (echo [ERROR] FFprobe must be in PATH. & exit /b 1)
+echo [CHECK] Verifying that older editors have stopped...
+python scripts\check_local_ports.py
+if errorlevel 1 (
+    echo [STOP] An old server may still be running. Close its terminal and retry run.bat.
+    exit /b 1
+)
 if not exist ".venv\Scripts\python.exe" (
     echo [SETUP] Creating Python virtual environment...
     python -m venv .venv || exit /b 1
