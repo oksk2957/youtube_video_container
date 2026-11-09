@@ -20,13 +20,13 @@ This repository evolves the Next.js 16 starter into a browser editor with a sepa
 3. Set `AI_CONFIG_ENCRYPTION_KEY` to **your own** 32-byte random hex secret generated with `python -c "import secrets; print(secrets.token_hex(32))"`. Keep the same key across web and worker deployments. Do not commit `.env`.
 4. Create GitHub OAuth app and configure `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` and callback URL `http://localhost:3000/api/auth/github/callback`.
 5. `docker compose up -d` starts PostgreSQL/MinIO and creates the `video-studio` bucket.
-6. `npm install`, then `npx prisma db push` to create tables in development. **For production use a reviewed, version-controlled Prisma migration before deploying.**
+6. `npm install`, then `npx prisma migrate deploy` to apply the versioned initial database migration.
 7. `npm run dev`, sign in through GitHub and create a project.
 8. In a second terminal run `docker compose --profile ai up -d --build ai-worker`.
 9. Upload a supported video containing speech. Open the AI panel. Enter your provider's Base URL (API root, for example `https://api.openai.com/v1`), analysis/chat model, transcription model, and API key. Save settings, choose 9:16 or 16:9, and start auto-edit.
 10. Monitor job status; download the resulting MP4 when DONE.
 
-**Other AI providers:** Set `AI_ALLOWED_HOSTS=api.openai.com,api.example.com` in `.env` and restart both web and worker when allowing another host. Server validates the exact host, HTTPS scheme, and no embedded credentials. Provider must support OpenAI-compatible chat completions and **audio transcriptions returning `verbose_json` with segment start/end times**. Many text-only LLM APIs do not offer ASR: in that case configure a compatible provider with ASR support, or extend the worker with a local speech recognizer. For an on-device localhost LLM, additional operator-controlled networking configuration is required.
+**Other AI providers:** Set `AI_ALLOWED_HOSTS=api.openai.com,api.example.com` in `.env` and restart both web and worker when allowing another host. Server validates the exact host, HTTPS scheme, and no embedded credentials. Provider must support OpenAI-compatible chat completions and **audio transcriptions returning `verbose_json` with segment start/end times**. Many text-only LLM APIs do not offer ASR: set the transcription model in the UI to `local:tiny`, `local:base` or `local:small` to use bundled CPU faster-whisper instead. The model is downloaded on first use into a persistent Docker volume; CPU transcription may be slow. This keeps the audio local, but the transcript is still sent to the configured chat model for cut selection. For an on-device localhost LLM, additional operator-controlled networking configuration is required.
 
 **Object store CORS:** The bucket must allow the UI origin to PUT/GET/HEAD objects using signed URLs, and expose ETag to the browser. AWS S3 CORS example:
 
