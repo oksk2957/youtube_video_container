@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { isSameOrigin, jsonError } from "@/lib/security";
-import { emptyTimeline } from "@/features/editor/timeline";
+import { emptyTimeline } from "@/features/editor/timeline.mjs";
 
 export const runtime = "nodejs";
 
