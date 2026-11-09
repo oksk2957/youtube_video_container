@@ -58,9 +58,12 @@ services:
       S3_ACCESS_KEY_ID: videostudio
       S3_SECRET_ACCESS_KEY: videostudio_dev_secret
       S3_FORCE_PATH_STYLE: "true"
-      AI_CONFIG_ENCRYPTION_KEY: \${AI_CONFIG_ENCRYPTION_KEY}
-      AI_ALLOWED_HOSTS: \${AI_ALLOWED_HOSTS:-api.openai.com}
-      AI_ALLOW_LOCAL_HTTP: \${AI_ALLOW_LOCAL_HTTP:-false}
+      AI_CONFIG_ENCRYPTION_KEY: ${AI_CONFIG_ENCRYPTION_KEY}
+      AI_ALLOWED_HOSTS: ${AI_ALLOWED_HOSTS:-api.openai.com}
+      AI_ALLOW_LOCAL_HTTP: ${AI_ALLOW_LOCAL_HTTP:-false}
+      HF_HOME: /models
+    volumes:
+      - whispermodels:/models
 
 volumes:
   pgdata:
