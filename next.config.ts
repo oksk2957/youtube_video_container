@@ -1,9 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
-  cacheComponents: true,
-  partialPrefetching: true,
+  // Authenticated editor screens are dynamic; enable partial caching only after validation.
   turbopack: {
     rules: {
       "*.css": {
