@@ -73,6 +73,7 @@ type BackendHealth = {
   storage?: string;
   ffmpeg?: boolean;
   ffprobe?: boolean;
+  local_ai_http?: boolean;
 };
 
 async function verifyLocalEditor(): Promise<void> {
@@ -220,6 +221,18 @@ export default function Home() {
     setError("");
     setBusy(true);
     try {
+      // A previous backend process may still be serving the old HTTP policy.
+      // Check the active process before starting a long-running video job.
+      if (/^http:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?(?:\/|$)/i.test(baseUrl.trim())) {
+        const health = await request<BackendHealth>("/api/health");
+        if (health.local_ai_http !== true) {
+          throw new Error(
+            "현재 실행 중인 Python 서버에서 로컬 HTTP AI 연결이 비활성화되어 있습니다. " +
+            "기존 서버를 stop.bat으로 종료하고 최신 main을 받은 뒤 run.bat으로 다시 실행하세요. " +
+            "ALLOW_LOCAL_AI_HTTP=0 환경변수가 설정되어 있다면 제거하세요."
+          );
+        }
+      }
       const result = await request<Status>("/api/sessions/" + session.session_id + "/start", "POST", {
         base_url: baseUrl, chat_model: chatModel, asr_model: asrModel,
         api_key: apiKey, format: ratio, style, target_seconds: duration, enhance,
@@ -341,7 +354,7 @@ export default function Home() {
               <input type="password" value={apiKey} onChange={e => setApiKey(e.target.value)} disabled={editing}
                 autoComplete="off" placeholder="이 편집 작업에만 사용"/>
             </label>
-            <p className="hint">일반 공개 HTTPS AI API 사용 가능. 로컬 Whisper는 <code>local:small</code>.
+            <p className="hint">공개 AI 서비스는 HTTPS, 로컬 AI 서버는 <code>http://localhost:7070/v1</code> 형식을 사용할 수 있습니다. 로컬 Whisper는 <code>local:small</code>.
               외부 AI에는 선택한 영상의 음성 전사 및 화면 분석 내용이 전송될 수 있습니다.</p>
           </section>
 
