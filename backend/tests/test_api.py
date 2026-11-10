@@ -12,7 +12,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from fastapi.testclient import TestClient
 from main import app, manager
 
-ORIGIN = {"Origin": "http://127.0.0.1:3100"}
+ORIGIN = {"Origin": "http://localhost:3000"}
 
 
 class ApiTests(unittest.TestCase):
@@ -58,6 +58,14 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(self.client.delete("/api/sessions/" + sid, headers=ORIGIN).status_code, 200)
         self.assertEqual(self.client.get("/api/sessions/" + sid + "/status").status_code, 404)
         self.assertIsNone(manager.by_token(response.cookies.get("one_shot_session")))
+
+    def test_alternate_loopback_origin_allowed(self):
+        response = self.client.post("/api/sessions",
+            headers={"Origin": "http://127.0.0.1:3000"},
+            files={"file": ("video.mp4", io.BytesIO(self.video.read_bytes()), "video/mp4")})
+        self.assertEqual(response.status_code, 201, response.text)
+        self.assertEqual(self.client.delete("/api/sessions/" + response.json()["session_id"],
+            headers={"Origin": "http://127.0.0.1:3000"}).status_code, 200)
 
     def test_cross_origin_upload_blocked(self):
         response = self.client.post("/api/sessions", headers={"Origin": "https://evil.example"},
