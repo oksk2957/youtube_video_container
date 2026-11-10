@@ -32,16 +32,38 @@ function time(seconds: number) {
   return Math.floor(rounded / 60) + ":" + String(rounded % 60).padStart(2, "0");
 }
 
+function apiErrorMessage(data: unknown, status: number): string {
+  if (data && typeof data === "object" && "detail" in data) {
+    const detail = (data as { detail: unknown }).detail;
+    if (typeof detail === "string") return detail;
+    if (Array.isArray(detail)) {
+      const messages = detail.slice(0, 3).map(item => {
+        if (!item || typeof item !== "object") return "";
+        const { loc, msg } = item as { loc?: unknown; msg?: unknown };
+        const field = Array.isArray(loc) ? loc.filter(x => x !== "body").join(".") : "";
+        return typeof msg === "string" ? (field ? field + ": " : "") + msg : "";
+      }).filter(Boolean);
+      if (messages.length) return "입력값 오류: " + messages.join(" / ");
+    }
+  }
+  return "서버 요청에 실패했습니다 (HTTP " + status + ").";
+}
+
 async function request<T>(path: string, method = "GET", body?: unknown): Promise<T> {
-  const response = await fetch(API + path, {
-    method,
-    credentials: "include",
-    cache: "no-store",
-    headers: body === undefined ? undefined : { "Content-Type": "application/json" },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
+  let response: Response;
+  try {
+    response = await fetch(API + path, {
+      method,
+      credentials: "include",
+      cache: "no-store",
+      headers: body === undefined ? undefined : { "Content-Type": "application/json" },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+  } catch {
+    throw new Error("로컬 Python API에 연결하지 못했습니다. 백엔드 창과 8100번 포트를 확인하세요.");
+  }
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.detail || "서버 요청에 실패했습니다.");
+  if (!response.ok) throw new Error(apiErrorMessage(data, response.status));
   return data as T;
 }
 
@@ -168,7 +190,7 @@ export default function Home() {
         xhr.onload = () => {
           const data = (() => { try { return JSON.parse(xhr.responseText); } catch { return {}; } })();
           if (xhr.status < 200 || xhr.status >= 300) {
-            reject(new Error(data.detail || "업로드가 실패했습니다."));
+            reject(new Error(apiErrorMessage(data, xhr.status)));
           } else resolve(data as SessionInfo);
         };
         const form = new FormData();
