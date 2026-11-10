@@ -35,11 +35,11 @@ jobs:
         run: python -m compileall -q backend
       - name: API, planner, and synthetic MP4 rendering tests
         run: python -m unittest discover -s backend/tests -v
-      - name: Verify live one-shot web and API on ports 3100 and 8100
+      - name: Verify live one-shot web and API on ports 3000 and 8100
         run: |
           python -m uvicorn main:app --app-dir backend --host 127.0.0.1 --port 8100 --no-access-log > /tmp/oneshot-api.log 2>&1 &
           API_PID=$!
-          npm run start -- -H 127.0.0.1 -p 3100 > /tmp/oneshot-web.log 2>&1 &
+          npm run start -- -H 127.0.0.1 -p 3000 > /tmp/oneshot-web.log 2>&1 &
           WEB_PID=$!
           trap 'kill "$API_PID" "$WEB_PID" 2>/dev/null || true; cat /tmp/oneshot-api.log; cat /tmp/oneshot-web.log' EXIT
           python scripts/verify_running_editor.py
