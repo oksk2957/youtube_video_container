@@ -1,4 +1,4 @@
-"""Confirm the dedicated 3100/8100 services really belong to One-Shot Studio."""
+"""Confirm localhost:3000 and the backend really belong to One-Shot Studio."""
 from __future__ import annotations
 
 import json
@@ -6,7 +6,7 @@ import sys
 import time
 from urllib.request import urlopen
 
-WEB = "http://127.0.0.1:3100/"
+WEB = "http://localhost:3000/"
 API = "http://127.0.0.1:8100/api/health"
 
 
@@ -31,7 +31,7 @@ def get_status() -> tuple[bool, str]:
         with urlopen(WEB, timeout=3) as response:
             html = response.read(2_000_000).decode("utf-8", errors="replace")
         if not correct_frontend(html):
-            return False, "Port 3100 does not serve the expected One-Shot Studio homepage."
+            return False, "Port 3000 does not serve the expected One-Shot Studio homepage."
         return True, "One-shot editor verified (local upload, no S3)."
     except (OSError, TimeoutError, ValueError, KeyError) as error:
         return False, "Still connecting: " + type(error).__name__
@@ -46,14 +46,14 @@ def main() -> int:
         if good:
             print("[OK] " + message)
             print("[OPEN] " + WEB)
-            print("[INFO] Do NOT open localhost:3000 (legacy S3 editor).")
+            print("[INFO] This is the correct local video editor, not the old starter page.")
             return 0
         last = message
         time.sleep(1)
     print("[ERROR] The dedicated one-shot editor did not become ready.")
     print("[ERROR] " + last)
     print("[FIX] Check the OneShot-Backend / OneShot-Frontend terminal windows.")
-    print("[FIX] The legacy S3 app at http://localhost:3000 is NOT the correct editor.")
+    print("[FIX] Close any old server on port 3000 and rerun run.bat.")
     return 1
 
 
