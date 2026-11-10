@@ -1,6 +1,6 @@
 # One-Shot AI Video Editor
 
-로컬 PC에서 **영상 업로드 → AI 자동 편집 → 미리보기 → MP4 다운로드 → 작업 종료**를 수행하는 Next.js + Python FastAPI 프로그램입니다. 로그인, DB, S3, Docker가 필요하지 않습니다.
+로컬 PC에서 **영상 업로드 → AI 자동 편집 → 미리보기 → MP4 다운로드 → 작업 종료**를 수행하는 Next.js + Python FastAPI 프로그램입니다. 로그인, DB, S3, Docker가 필요하지 않습니다..
 
 ## 접속 주소
 
