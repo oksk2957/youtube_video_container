@@ -53,7 +53,7 @@ Get-NetTCPConnection -State Listen -LocalPort 3000,8100 -ErrorAction SilentlyCon
 ## 편집 오류 진단 (Bruno / API / AI)
 
 - **편집 UI는 `http://localhost:3000/`**입니다. `8100`번은 Python 백엔드 API이므로 그 주소에서 영상 편집 화면이 열리지 않습니다.
-- `GET http://127.0.0.1:8100/api/health`에 대한 정상 응답은 `{"app":"one-shot-local","storage":"temporary-local","ok":true,"ffmpeg":true,"ffprobe":true}` 형태입니다.
+- `GET http://127.0.0.1:8100/api/health`에 대한 정상 응답은 `{"app":"one-shot-local","storage":"temporary-local","ok":true,"ffmpeg":true,"ffprobe":true,"local_ai_http":true}` 형태입니다.
 - `POST /api/health`는 편집 시작 요청이 **아닙니다**. 지원하는 메서드는 GET뿐입니다. Origin이 없는 POST는 보안 검사에서 403으로 거부될 수 있습니다.
 - Bruno의 `0B`, `No Body`, `Request / Response / Network`는 요청 본문과 도구 화면 요소일 수 있습니다. **HTTP 상태 코드 및 Response 본문**을 함께 확인해야 실제 오류를 알 수 있습니다.
 - 영상 편집을 시작하는 API는 `POST /api/sessions/{session_id}/start`이고, 진행 상태·AI 오류는 `GET /api/sessions/{session_id}/status`에서 확인합니다. 직접 Bruno로 호출하면 업로드 시 발급된 **세션 쿠키**와 올바른 `Origin` 헤더가 필요하므로 웹 UI를 사용하는 편이 간단합니다.
@@ -71,6 +71,29 @@ Invoke-RestMethod -Method Get -Uri "http://127.0.0.1:8100/api/health"
 - HTTP 429: AI 제공업체 사용 한도, 잔액, 요청 제한을 확인합니다.
 - 로컬 `local:small` 음성 인식은 모델을 첫 실행 시 다운로드할 수 있으므로 인터넷 연결과 저장 공간이 필요합니다. 음성 인식 없는 영상은 장면 분석으로 전환합니다.
 - 웹 편집기 우측 진행 화면에 뜬 상세 오류와 Python 서버 창의 로그를 함께 확인하세요. API 키 또는 원본 영상의 개인정보는 공유하지 마세요.
+
+### 로컬 AI `http://localhost:7070/v1` 연결 시 2%에서 실패할 때
+
+- 편집 화면에서 `ALLOW_LOCAL_AI_HTTP=1` 오류가 나면 실행 중인 **구형 Python 백엔드**이거나 Windows 환경변수 `ALLOW_LOCAL_AI_HTTP=0`이 명시적으로 설정되어 있을 수 있습니다.
+- 최신 버전은 **이 PC의 `localhost`/`127.0.0.1` HTTP AI 서버만 기본 허용**합니다. 외부 AI 서버는 HTTPS만 허용하고, 내부망·사설 IP로의 연결도 차단합니다. 로컬 HTTP를 금지하려면 `ALLOW_LOCAL_AI_HTTP=0`으로 명시적으로 끌 수 있습니다.
+- 편집 UI는 실행 중인 API의 `/api/health` 응답에서 `local_ai_http` 값을 확인합니다. `false`이거나 필드가 없다면 오래된 백엔드/환경 설정을 확인해야 합니다.
+- 코드를 받는 것만으로 실행 중인 서버가 갱신되지 않습니다. **먼저 `stop.bat` 실행**, 그다음 아래 명령으로 최신 `main`을 받고 **`run.bat`으로 재실행**하세요.
+
+```powershell
+cd "C:\project_v1\project-2026-11-06\youtube_video_project_v1"
+.\stop.bat
+git fetch origin
+git switch main
+git pull --ff-only origin main
+.\run.bat
+Invoke-RestMethod "http://127.0.0.1:8100/api/health"
+Test-NetConnection -ComputerName 127.0.0.1 -Port 7070
+```
+
+- 상태 확인 응답에서 `local_ai_http: true`여야 하며, `TcpTestSucceeded: True`는 **7070 포트에 프로그램이 실행 중임을 의미할 뿐 AI API 호환성을 보증하지는 않습니다**.
+- 별도 실행 중인 AI 서버가 `POST /v1/chat/completions`을 지원하고 `fusion` 모델을 인식하는지도 확인하세요. `local:small`은 영상 편집기 PC의 faster-whisper 음성 인식 모델입니다.
+- 브라우저 개발자 도구에서 복사한 요청의 `credentials: "omit"`은 업로드 시 발급된 세션 쿠키를 전송하지 않습니다. 실제 편집 UI는 `credentials: "include"`를 사용하므로 **웹 화면에서 다시 실행**하세요. 직접 API 요청을 재생하거나 키를 공개 로그에 공유하지 마세요.
+- AI API 키가 화면 캡처나 복사한 요청에 노출됐다면 제공처에서 즉시 **폐기 후 재발급**하세요.
 
 ## 기능
 
