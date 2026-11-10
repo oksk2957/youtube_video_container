@@ -10,9 +10,9 @@ from verify_running_editor import compatible_health, correct_frontend
 
 
 class PortTests(unittest.TestCase):
-    def test_legacy_3000_is_not_a_required_port(self):
-        self.assertEqual(set(PORT_NAMES), {3100, 8100})
-        self.assertNotIn(3000, PORT_NAMES)
+    def test_editor_uses_documented_ports(self):
+        self.assertEqual(set(PORT_NAMES), {3000, 8100})
+        self.assertNotIn(3100, PORT_NAMES)
 
     def test_correct_server_identity_is_required(self):
         health = {"app": "one-shot-local", "storage": "temporary-local",
