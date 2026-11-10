@@ -44,6 +44,11 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(response.json()["storage"], "temporary-local")
         self.assertNotIn("s3", response.text.lower())
 
+    def test_health_is_get_only(self):
+        response = self.client.post("/api/health", headers=ORIGIN)
+        self.assertEqual(response.status_code, 405)
+        self.assertEqual(response.headers["allow"], "GET")
+
     def upload(self):
         return self.client.post("/api/sessions", headers=ORIGIN,
             files={"file": ("video.mp4", io.BytesIO(self.video.read_bytes()), "video/mp4")})
