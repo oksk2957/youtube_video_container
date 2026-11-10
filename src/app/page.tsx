@@ -2,7 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8100";
+const API = process.env.NEXT_PUBLIC_API_URL ||
+  (typeof window !== "undefined" && window.location.hostname === "127.0.0.1"
+    ? "http://127.0.0.1:8100"
+    : "http://localhost:8100");
 const MAX_BYTES = 1024 * 1024 * 1024;
 
 type SessionInfo = {
