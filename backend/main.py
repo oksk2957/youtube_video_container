@@ -25,7 +25,7 @@ from session_manager import BASE_DIR, COOKIE_NAME, EditCancelled, Session, manag
 LOG = logging.getLogger("one-shot-backend")
 MAX_UPLOAD = int(os.getenv("MAX_UPLOAD_BYTES", str(1024 * 1024 * 1024)))
 ALLOWED_SUFFIXES = {".mp4", ".mov", ".webm"}
-FRONTEND_ORIGIN = "http://127.0.0.1:3100"
+FRONTEND_ORIGINS = ("http://localhost:3000", "http://127.0.0.1:3000")
 
 
 @asynccontextmanager
@@ -47,7 +47,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="One-Shot AI Video Editor", lifespan=lifespan, docs_url=None, redoc_url=None)
 app.add_middleware(
-    CORSMiddleware, allow_origins=[FRONTEND_ORIGIN], allow_credentials=True,
+    CORSMiddleware, allow_origins=list(FRONTEND_ORIGINS), allow_credentials=True,
     allow_methods=["GET", "POST", "DELETE"], allow_headers=["Content-Type"],
 )
 
@@ -55,7 +55,7 @@ app.add_middleware(
 @app.middleware("http")
 async def protect_origin(request: Request, call_next):
     if request.method in {"POST", "PUT", "PATCH", "DELETE"}:
-        if request.headers.get("origin") != FRONTEND_ORIGIN:
+        if request.headers.get("origin") not in FRONTEND_ORIGINS:
             return JSONResponse({"detail": "요청 출처를 확인할 수 없습니다."}, status_code=403)
     response = await call_next(request)
     response.headers["Cache-Control"] = "no-store"
