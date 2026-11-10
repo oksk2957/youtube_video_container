@@ -50,6 +50,28 @@ Get-NetTCPConnection -State Listen -LocalPort 3000,8100 -ErrorAction SilentlyCon
 - Python 백엔드 창 또는 Next.js 프런트엔드 창이 종료되었다면 해당 창의 오류 로그를 확인하세요.
 - 성공 시 `http://localhost:3000/`으로 접속하고, 이전 기본 템플릿 화면이 캐시되어 있다면 `Ctrl+F5`를 누르세요.
 
+## 편집 오류 진단 (Bruno / API / AI)
+
+- **편집 UI는 `http://localhost:3000/`**입니다. `8100`번은 Python 백엔드 API이므로 그 주소에서 영상 편집 화면이 열리지 않습니다.
+- `GET http://127.0.0.1:8100/api/health`에 대한 정상 응답은 `{"app":"one-shot-local","storage":"temporary-local","ok":true,"ffmpeg":true,"ffprobe":true}` 형태입니다.
+- `POST /api/health`는 편집 시작 요청이 **아닙니다**. 지원하는 메서드는 GET뿐입니다. Origin이 없는 POST는 보안 검사에서 403으로 거부될 수 있습니다.
+- Bruno의 `0B`, `No Body`, `Request / Response / Network`는 요청 본문과 도구 화면 요소일 수 있습니다. **HTTP 상태 코드 및 Response 본문**을 함께 확인해야 실제 오류를 알 수 있습니다.
+- 영상 편집을 시작하는 API는 `POST /api/sessions/{session_id}/start`이고, 진행 상태·AI 오류는 `GET /api/sessions/{session_id}/status`에서 확인합니다. 직접 Bruno로 호출하면 업로드 시 발급된 **세션 쿠키**와 올바른 `Origin` 헤더가 필요하므로 웹 UI를 사용하는 편이 간단합니다.
+
+PowerShell에서 백엔드가 정말 실행 중인지 점검:
+
+```powershell
+Invoke-RestMethod -Method Get -Uri "http://127.0.0.1:8100/api/health"
+```
+
+- 연결 실패: `run.bat`으로 Python 백엔드가 시작되었는지 확인합니다. 3000/8100 포트가 다른 서버에 이미 사용되고 있다면 해당 서버를 정상 종료한 뒤 재시작합니다.
+- `ffmpeg: false` 또는 `ffprobe: false`: FFmpeg/FFprobe 설치와 PATH를 확인합니다.
+- HTTP 401/403: AI 제공업체 API 키와 권한을 확인합니다. **키를 로그나 이슈에 게시하지 마세요.**
+- HTTP 404: AI Base URL(`/v1` 포함 여부) 및 모델·서비스의 API 호환성을 확인합니다.
+- HTTP 429: AI 제공업체 사용 한도, 잔액, 요청 제한을 확인합니다.
+- 로컬 `local:small` 음성 인식은 모델을 첫 실행 시 다운로드할 수 있으므로 인터넷 연결과 저장 공간이 필요합니다. 음성 인식 없는 영상은 장면 분석으로 전환합니다.
+- 웹 편집기 우측 진행 화면에 뜬 상세 오류와 Python 서버 창의 로그를 함께 확인하세요. API 키 또는 원본 영상의 개인정보는 공유하지 마세요.
+
 ## 기능
 
 1. MP4, MOV 또는 WebM 영상 업로드 (최대 1GiB, 최대 30분, 최대 4096px).
