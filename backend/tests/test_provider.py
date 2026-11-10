@@ -25,13 +25,38 @@ class ProviderTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             validate_base_url("http://api.example.com/v1")
 
-    def test_local_http_requires_opt_in(self):
+    def test_local_http_allowed_by_default_without_env(self):
         with patch.dict(os.environ, {}, clear=True):
-            with self.assertRaises(ValueError):
-                validate_base_url("http://127.0.0.1:11434/v1")
-        with patch.dict(os.environ, {"ALLOW_LOCAL_AI_HTTP": "1"}):
             self.assertEqual(validate_base_url("http://127.0.0.1:11434/v1"),
                              "http://127.0.0.1:11434/v1")
+            self.assertEqual(validate_base_url("http://localhost:7070/v1"),
+                             "http://localhost:7070/v1")
+            self.assertNotIn("ALLOW_LOCAL_AI_HTTP", os.environ)
+
+    def test_local_http_opt_out_is_respected(self):
+        with patch.dict(os.environ, {"ALLOW_LOCAL_AI_HTTP": "0"}):
+            with self.assertRaisesRegex(ValueError, "ALLOW_LOCAL_AI_HTTP=1"):
+                validate_base_url("http://localhost:7070/v1")
+            self.assertEqual(validate_base_url("https://localhost:7070/v1"),
+                             "https://localhost:7070/v1")
+
+    def test_local_fusion_endpoint_is_used_with_no_key(self):
+        with patch.dict(os.environ, {}, clear=True):
+            provider = AIProvider("http://localhost:7070/v1", "fusion", "local:small", "")
+            provider.http.close()
+            called = []
+            def respond(request):
+                called.append((str(request.url), request.headers.get("authorization"),
+                               request.content.decode("utf-8")))
+                return httpx.Response(200, json={
+                    "choices": [{"message": {"content": '{"title":"ok","cuts":[]}'}}],
+                })
+            provider.http = httpx.Client(transport=httpx.MockTransport(respond))
+            self.assertEqual(provider.chat_json("system", "user")["title"], "ok")
+            self.assertEqual(called[0][0], "http://localhost:7070/v1/chat/completions")
+            self.assertIsNone(called[0][1])
+            self.assertIn('"model":"fusion"', called[0][2].replace(" ", ""))
+            provider.close()
 
     @patch("socket.getaddrinfo")
     def test_mock_ai_chat_json(self, resolver):
@@ -92,8 +117,8 @@ class ProviderTests(unittest.TestCase):
             provider.chat_json("system", "user")
         provider.close()
 
-    def test_local_https_allows_missing_key_with_opt_in(self):
-        with patch.dict(os.environ, {"ALLOW_LOCAL_AI_HTTP": "1"}):
+    def test_local_https_allows_missing_key_even_when_http_disabled(self):
+        with patch.dict(os.environ, {"ALLOW_LOCAL_AI_HTTP": "0"}):
             provider = AIProvider("https://localhost:11434/v1", "chat", "local:tiny", "")
             provider.close()
 

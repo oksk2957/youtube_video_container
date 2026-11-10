@@ -23,10 +23,15 @@ def validate_base_url(value: str) -> str:
         raise ValueError("AI Base URL에 사용자 정보·쿼리·해시를 넣을 수 없습니다.")
     local = hostname in {"localhost", "127.0.0.1"}
     if local:
-        if os.getenv("ALLOW_LOCAL_AI_HTTP") != "1":
-            raise ValueError("로컬 AI 연결에는 ALLOW_LOCAL_AI_HTTP=1 설정이 필요합니다.")
         if url.scheme not in {"https", "http"}:
             raise ValueError("로컬 AI URL에는 HTTP 또는 HTTPS를 사용하세요.")
+        # Loopback HTTP never leaves this PC. Permit it by default for local
+        # AI tools, but preserve an explicit opt-out (ALLOW_LOCAL_AI_HTTP=0).
+        if url.scheme == "http" and os.getenv("ALLOW_LOCAL_AI_HTTP", "1") != "1":
+            raise ValueError(
+                "로컬 HTTP AI 연결이 비활성화되어 있습니다. "
+                "ALLOW_LOCAL_AI_HTTP=1로 설정한 뒤 Python 백엔드를 재시작하세요."
+            )
     elif url.scheme != "https":
         raise ValueError("외부 AI 서버에는 HTTPS가 필요합니다.")
     if not local:

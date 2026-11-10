@@ -1,4 +1,5 @@
 import io
+import os
 import shutil
 import subprocess
 import sys
@@ -48,6 +49,15 @@ class ApiTests(unittest.TestCase):
         response = self.client.post("/api/health", headers=ORIGIN)
         self.assertEqual(response.status_code, 405)
         self.assertEqual(response.headers["allow"], "GET")
+
+    def test_health_exposes_local_http_policy(self):
+        with patch.dict(os.environ, {}, clear=True):
+            self.assertTrue(self.client.get("/api/health").json()["local_ai_http"])
+            self.assertNotIn("ALLOW_LOCAL_AI_HTTP", os.environ)
+        with patch.dict(os.environ, {"ALLOW_LOCAL_AI_HTTP": "0"}):
+            self.assertFalse(self.client.get("/api/health").json()["local_ai_http"])
+        with patch.dict(os.environ, {"ALLOW_LOCAL_AI_HTTP": "1"}):
+            self.assertTrue(self.client.get("/api/health").json()["local_ai_http"])
 
     def upload(self):
         return self.client.post("/api/sessions", headers=ORIGIN,
