@@ -50,13 +50,34 @@ class AIProvider:
         self.asr_model = asr_model.strip()
         if not self.chat_model or not self.asr_model:
             raise ValueError("AI 모델 이름을 입력하세요.")
-        if not api_key and not self.base_url.startswith(("http://127.0.0.1", "http://localhost")):
+        if not api_key and urlsplit(self.base_url).hostname not in {"localhost", "127.0.0.1"}:
             raise ValueError("외부 AI 서비스의 API 키가 필요합니다.")
         self.headers = {"Authorization": "Bearer " + api_key} if api_key else {}
         self.http = httpx.Client(timeout=httpx.Timeout(180, connect=15), follow_redirects=False, trust_env=False)
 
     def close(self):
         self.http.close()
+
+    def _post(self, endpoint: str, **kwargs) -> httpx.Response:
+        """Give actionable provider errors without echoing credentials or remote bodies."""
+        try:
+            response = self.http.post(self.base_url + endpoint, **kwargs)
+        except httpx.TimeoutException as exc:
+            raise ValueError("AI 서버 응답 시간이 초과되었습니다. 인터넷 연결과 제공업체 상태를 확인하세요.") from exc
+        except httpx.RequestError as exc:
+            raise ValueError("AI 서버에 연결하지 못했습니다. Base URL과 네트워크 연결을 확인하세요.") from exc
+        code = response.status_code
+        if code in (401, 403):
+            raise ValueError(f"AI API 인증 또는 접근 권한 오류 (HTTP {code}). API 키와 권한을 확인하세요.")
+        if code == 404:
+            raise ValueError("AI API 주소 또는 모델 경로를 찾지 못했습니다 (HTTP 404). Base URL에 /v1이 필요한지 확인하세요.")
+        if code == 429:
+            raise ValueError("AI API 호출 한도 초과 (HTTP 429). 잔액·요금제·요청 제한을 확인하세요.")
+        if code >= 500:
+            raise ValueError(f"AI 제공업체 서버 오류 (HTTP {code}). 잠시 후 다시 시도하세요.")
+        if code >= 400:
+            raise ValueError(f"AI API 요청 오류 (HTTP {code}). 모델 이름과 서비스의 API 호환성을 확인하세요.")
+        return response
 
     def transcribe(self, audio: Path, check=None) -> list[dict]:
         if check:
@@ -69,7 +90,10 @@ class AIProvider:
                 from faster_whisper import WhisperModel
             except ImportError as exc:
                 raise ValueError("로컬 Whisper 패키지가 설치되지 않았습니다. requirements-whisper.txt를 설치하세요.") from exc
-            model = WhisperModel(size, device="cpu", compute_type="int8")
+            try:
+                model = WhisperModel(size, device="cpu", compute_type="int8")
+            except (RuntimeError, OSError, ValueError) as exc:
+                raise ValueError("로컬 Whisper 모델을 불러오지 못했습니다. 첫 실행 시 인터넷 연결, 디스크 용량, 모델 설치 상태를 확인하세요.") from exc
             segments, _ = model.transcribe(str(audio), vad_filter=True, beam_size=3)
             output = []
             for segment in segments:
@@ -85,8 +109,8 @@ class AIProvider:
                 raise ValueError("음성 인식 구간이 450개를 넘는 영상은 현재 지원하지 않습니다.")
             return output
         with audio.open("rb") as handle:
-            response = self.http.post(
-                self.base_url + "/audio/transcriptions",
+            response = self._post(
+                "/audio/transcriptions",
                 headers=self.headers,
                 data={
                     "model": self.asr_model,
@@ -95,9 +119,12 @@ class AIProvider:
                 },
                 files={"file": (audio.name, handle, "audio/mpeg")},
             )
-        if response.status_code >= 400:
-            raise ValueError("AI 음성 인식 API가 요청을 처리하지 못했습니다. 모델과 API 호환성을 확인하세요.")
-        data = response.json()
+        try:
+            data = response.json()
+        except ValueError as exc:
+            raise ValueError("AI 음성 인식 API가 JSON이 아닌 응답을 반환했습니다.") from exc
+        if not isinstance(data, dict):
+            raise ValueError("AI 음성 인식 API의 응답이 JSON 객체가 아닙니다.")
         raw_segments = data.get("segments")
         if not isinstance(raw_segments, list):
             raise ValueError("ASR API가 시작·종료 시간 정보가 있는 segments를 제공하지 않습니다. local:small을 사용해 보세요.")
@@ -116,8 +143,8 @@ class AIProvider:
         return output
 
     def chat_json(self, system: str, user: str) -> dict:
-        response = self.http.post(
-            self.base_url + "/chat/completions",
+        response = self._post(
+            "/chat/completions",
             headers={**self.headers, "Content-Type": "application/json"},
             json={
                 "model": self.chat_model,
@@ -128,8 +155,6 @@ class AIProvider:
                 ],
             },
         )
-        if response.status_code >= 400:
-            raise ValueError("AI 대화 API가 요청을 처리하지 못했습니다. Base URL, 모델명, API 키를 확인하세요.")
         try:
             body = response.json()
             content = body["choices"][0]["message"]["content"]
