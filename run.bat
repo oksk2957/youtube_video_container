@@ -7,6 +7,12 @@ echo    One-Shot AI Video Editor - Local PC
 echo  =========================================
 echo.
 where node >nul 2>&1 || (echo [ERROR] Node.js 22+ is required. & exit /b 1)
+node -e "process.exit(Number(process.versions.node.split('.')[0]) >= 22 ? 0 : 1)" >nul 2>&1
+if errorlevel 1 (
+    echo [ERROR] Node.js 22+ is required. Current Node version:
+    node --version
+    exit /b 1
+)
 where npm >nul 2>&1 || (echo [ERROR] npm is required. & exit /b 1)
 where ffmpeg >nul 2>&1 || (echo [ERROR] FFmpeg must be in PATH. & exit /b 1)
 where ffprobe >nul 2>&1 || (echo [ERROR] FFprobe must be in PATH. & exit /b 1)
@@ -40,6 +46,11 @@ if errorlevel 1 (
 if not exist ".venv\Scripts\python.exe" (
     echo [SETUP] Creating Python virtual environment...
     %PYTHON% -m venv .venv || exit /b 1
+)
+rem A stale install marker must not bypass missing dependencies.
+if exist ".venv\.installed" (
+    ".venv\Scripts\python.exe" -c "import fastapi, uvicorn, httpx, pydantic, PIL, faster_whisper" >nul 2>&1
+    if errorlevel 1 del /q ".venv\.installed"
 )
 if not exist ".venv\.installed" (
     echo [SETUP] Installing Python dependencies and local speech recognition...
