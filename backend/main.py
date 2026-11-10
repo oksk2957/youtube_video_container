@@ -27,11 +27,6 @@ MAX_UPLOAD = int(os.getenv("MAX_UPLOAD_BYTES", str(1024 * 1024 * 1024)))
 ALLOWED_SUFFIXES = {".mp4", ".mov", ".webm"}
 FRONTEND_ORIGINS = ("http://localhost:3000", "http://127.0.0.1:3000")
 
-# Auto-allow local AI HTTP if not explicitly set
-if "ALLOW_LOCAL_AI_HTTP" not in os.environ:
-    os.environ["ALLOW_LOCAL_AI_HTTP"] = "1"
-
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     manager.sweep()
@@ -95,7 +90,8 @@ def validate_video_signature(head: bytes, ext: str):
 def health():
     return {"app": "one-shot-local", "storage": "temporary-local", "ok": True,
             "ffmpeg": shutil.which("ffmpeg") is not None,
-            "ffprobe": shutil.which("ffprobe") is not None}
+            "ffprobe": shutil.which("ffprobe") is not None,
+            "local_ai_http": os.getenv("ALLOW_LOCAL_AI_HTTP", "1") == "1"}
 
 
 @app.post("/api/sessions", status_code=201)
